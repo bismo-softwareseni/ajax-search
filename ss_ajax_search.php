@@ -80,7 +80,7 @@
         //-- function for enqueueing css and js
         function ssSearchEnqueueScript() {
             //-- main js file
-            wp_enqueue_script( 'ss_search_main_js', plugin_dir_url( __FILE__ ) . 'js/ss_ajax_search.js' );
+            wp_enqueue_script( 'ss_search_main_js', plugin_dir_url( __FILE__ ) . 'js/ss_ajax_search.js', array( 'jquery' ) );
 
             //-- main css file
             wp_enqueue_style( 'ss_search_main_css', plugin_dir_url( __FILE__ ) . 'css/ss_ajax_search.css' );
@@ -124,10 +124,12 @@
 
             //-- get keyword
             if( isset( $_POST[ 'ajax-input-post-title' ] ) && !isset( $_POST[ 'ajax-all-post-title' ] ) ) {
-                $ss_input_post_title    = "'" . preg_replace( '/[ ,.]+/', '$|', trim( $_POST[ 'ajax-input-post-title' ] ) ) . "$'";
-                $ss_select_terms        = " $wpdb->posts.ID, $wpdb->posts.post_title "; 
-                $ss_sql_title           = " $wpdb->posts.post_title != '" . $_POST[ 'ajax-input-post-title' ] . "' AND $wpdb->posts.post_title REGEXP ".$ss_input_post_title." AND ";
-            
+                //-- split keywords into individual words
+                if( !empty( $_POST[ 'ajax-input-post-title' ] ) ) {
+                    $ss_input_post_title    = explode( ' ', preg_replace( '/[,.]+/', '', trim( $_POST[ 'ajax-input-post-title' ] ) ) );
+                    $ss_select_terms        = " $wpdb->posts.ID, $wpdb->posts.post_title ";
+                    $ss_sql_title           = " $wpdb->posts.post_title != '" . $_POST[ 'ajax-input-post-title' ] . "' AND $wpdb->posts.post_title REGEXP '.[[:<:]]" . implode( '[[:>:]]|.[[:<:]]', $ss_input_post_title ) . "[[:>:]]' AND ";                    
+                }
                 
                 //-- count max post ( for ajax pagination )
                 $ss_count_max_posts = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT( $wpdb->posts.ID )
