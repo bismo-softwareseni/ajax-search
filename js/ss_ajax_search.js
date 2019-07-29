@@ -30,13 +30,18 @@
             //-- get autocomplete data
             var ss_autocomplete_ajax_data = {
                 'action' : 'ssSearchHandleAjaxRequest',
-                'ajax-all-post-title' : true
+                'ajax-get-autocomplete-data' : true
             };
 
             jQuery.post( ajax_object.ajax_url, ss_autocomplete_ajax_data, function( response ) {
-                if( response !== "" ) {
-                    ss_autocomplete_result = JSON.parse( response ).map( function( item ) { return item.post_title; } );
-                
+
+                var ss_post_results = JSON.parse( response ).posts;
+
+                for( var i=0; i<ss_post_results.length; i++ ) {
+                    ss_autocomplete_result.push( ss_post_results[ i ][ 'post_title' ] );
+                }
+
+                if( ss_post_results.length > 0 ) {
                     //-- enabling jQuery autocomplete
                     $( this_main_obj.ss_text_input_elem ).autocomplete( {
                         source: ss_autocomplete_result
@@ -71,7 +76,15 @@
             };
 
             jQuery.post( ajax_object.ajax_url, ss_input_data, function( response ) {
-                var ss_search_result = JSON.parse( response );
+                response = JSON.parse( response );
+
+                //-- get current page & max page
+                var ss_max_page     = parseInt( response.max_num_pages );
+                var ss_current_page = parseInt( response.query[ 'paged' ] );
+                var ss_page_next    = 0;
+                var ss_page_prev    = 0;
+
+                var ss_search_result = response.posts;
                 
                 //-- show result
                 $( '.ajax-search-result-container' ).fadeIn( 'fast' );
@@ -83,12 +96,6 @@
                         $( '.post-suggestion' ).append( ss_html_tags );    
                     }
     
-                    //-- get current page & max page
-                    var ss_max_page     = parseInt( ss_search_result[ 0 ][ 'max_page' ] );
-                    var ss_current_page = parseInt( ss_search_result[ 0 ][ 'current_page' ] );
-                    var ss_page_next    = 0;
-                    var ss_page_prev    = 0;
-                    
                     //-- define next and prev page
                     if( (ss_current_page-1) >= 1 ) {
                         ss_page_prev = ss_current_page-1;

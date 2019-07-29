@@ -15,6 +15,8 @@
 
     class SS_Ajax_Search_Main {
         var $ss_max_result_per_page = 5;
+        var $ss_input_post_title;
+        var $ss_input_post_title_origin;
 
         function __construct() {
             /**
@@ -111,76 +113,82 @@
 
         //-- function to handle ajax request
         function ssSearchHandleAjaxRequest() {
-            global $wpdb;
-            $ss_input_post_title    = "";
             $ss_sql_title           = "";
             $ss_sql_pagination      = "";
             $ss_results             = "";
-            $ss_results_with_tag    = array();
-            $ss_select_terms        = " $wpdb->posts.post_title ";
             $ss_count_max_posts     = 0;
             $ss_current_page        = 1;
             $ss_max_page            = 1;
 
-            //-- get keyword
-            if( isset( $_POST[ 'ajax-input-post-title' ] ) && !isset( $_POST[ 'ajax-all-post-title' ] ) ) {
-                //-- split keywords into individual words
-                if( !empty( $_POST[ 'ajax-input-post-title' ] ) ) {
-                    $ss_input_post_title    = explode( ' ', preg_replace( '/[,.]+/', '', trim( $_POST[ 'ajax-input-post-title' ] ) ) );
-                    $ss_select_terms        = " $wpdb->posts.ID, $wpdb->posts.post_title ";
-                    $ss_sql_title           = " $wpdb->posts.post_title != '" . $_POST[ 'ajax-input-post-title' ] . "' AND $wpdb->posts.post_title REGEXP '.[[:<:]]" . implode( '[[:>:]]|.[[:<:]]', $ss_input_post_title ) . "[[:>:]]' AND ";                    
-                }
+            //-- get autocomplete data
+            if( isset( $_POST[ 'ajax-get-autocomplete-data' ] ) && !empty( $_POST[ 'ajax-get-autocomplete-data' ] ) ) {
+                $ss_autocomplete_args = array(
+                    'post_type'     => 'post',
+                    'post_status'   => 'publish'
+                );
+    
+                $ss_results = new WP_Query( $ss_autocomplete_args );
+            }
+
+            //-- search similar title
+            if( isset( $_POST[ 'ajax-input-post-title' ] ) && !empty( $_POST[ 'ajax-input-post-title' ] ) ) {
+                $this->ss_input_post_title          = explode( ' ', preg_replace( '/[,.]+/', '', trim( $_POST[ 'ajax-input-post-title' ] ) ) );
+                $this->ss_input_post_title_origin   = $_POST[ 'ajax-input-post-title' ];
+
+                //-- count max post
+                add_filter( 'posts_where', array( $this, 'ssSearchRegexFilter' ) );
+                $ss_max_post_args = array(
+                    'post_type'     => 'post',
+                    'post_status'   => 'publish',
+                    'orderby'       => 'title',
+                    'order'         => 'asc'
+                );
                 
-                //-- count max post ( for ajax pagination )
-                $ss_count_max_posts = $wpdb->get_var( $wpdb->prepare( "SELECT COUNT( $wpdb->posts.ID )
-                                                                        FROM $wpdb->posts
-                                                                        WHERE ".$ss_sql_title." 
-                                                                        $wpdb->posts.post_status = 'publish' 
-                                                                        AND $wpdb->posts.post_type = 'post'"
-                                                                    , array() ) );
+                $ss_max_post_results = new WP_Query( $ss_max_post_args );
+
+                remove_filter( 'posts_where', array( $this, 'ssSearchRegexFilter' ) );
 
                 //-- get max page
-                $ss_max_page = ceil( $ss_count_max_posts / $this->ss_max_result_per_page );
+                $ss_count_max_posts = $ss_max_post_results->post_count;
+                $ss_max_page        = ceil( $ss_count_max_posts / $this->ss_max_result_per_page );
                 
+               
+
                 //-- get current page
                 if( isset( $_POST[ 'ajax-go-to-page' ] ) && $_POST[ 'ajax-go-to-page' ] > 0 ) {
                     $ss_current_page = $_POST[ 'ajax-go-to-page' ];
                 }
 
-                //-- set sql pagination
-                $ss_sql_pagination = " LIMIT " . ( ($ss_current_page-1) * $this->ss_max_result_per_page ) . ", " . $this->ss_max_result_per_page;
+                //-- search similar title
+                add_filter( 'posts_where', array( $this, 'ssSearchRegexFilter' ) );
+                $ss_search_args = array(
+                    'post_type'         => 'post',
+                    'post_status'       => 'publish',
+                    'orderby'           => 'title',
+                    'order'             => 'asc',
+                    'posts_per_page'    => $this->ss_max_result_per_page,
+                    'paged'             => $ss_current_page,
+                    'offset'            => ($ss_current_page-1) * $this->ss_max_result_per_page
+                );                
+                $ss_results = new WP_Query( $ss_search_args );
+
+                remove_filter( 'posts_where', array( $this, 'ssSearchRegexFilter' ) );
             }
 
-            //-- get post that has publish status ( autocomplete using this sql too )
-            $ss_sql = "SELECT DISTINCT". $ss_select_terms ."
-                FROM $wpdb->posts
-                WHERE ".$ss_sql_title." 
-                $wpdb->posts.post_status = 'publish' 
-                AND $wpdb->posts.post_type = 'post'
-                ORDER BY $wpdb->posts.post_title ASC ".$ss_sql_pagination;
-
-            $ss_results = $wpdb->get_results( $ss_sql );
-
-            //-- return the result ( only string for autocomplete )
-            if( isset( $_POST[ 'ajax-input-post-title' ] ) && !isset( $_POST[ 'ajax-all-post-title' ] ) ) {
-                foreach( $ss_results as $ss_result ) {
-                    $ss_result_tag = array(
-                        'ID'            => $ss_result->ID,
-                        'post_url'      => esc_url( get_permalink( $ss_result->ID ) ),
-                        'post_title'    => $ss_result->post_title,
-                        'max_page'      => $ss_max_page,
-                        'current_page'  => $ss_current_page
-                    );
-                    array_push( $ss_results_with_tag, $ss_result_tag);
-                }
-                
-                echo json_encode( $ss_results_with_tag );
-            } else {
-                echo json_encode( $ss_results );
-            }
+            
+            echo json_encode( $ss_results );            
 
             //-- to terminate immediately and get the proper response
             wp_die();
+        }
+
+        //-- function to filter the suggestion search
+        function ssSearchRegexFilter( $where ) {
+            if( !empty( $this->ss_input_post_title ) ) {
+                $where .= " AND wp_posts.post_title != '" . $this->ss_input_post_title_origin . "' AND wp_posts.post_title REGEXP '.[[:<:]]" . implode( '[[:>:]]|.[[:<:]]', $this->ss_input_post_title ) . "[[:>:]]' "; 
+            }
+
+            return $where;
         }
     }
 
