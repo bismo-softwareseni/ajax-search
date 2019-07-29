@@ -35,7 +35,7 @@
 
             jQuery.post( ajax_object.ajax_url, ss_autocomplete_ajax_data, function( response ) {
 
-                var ss_post_results = JSON.parse( response ).posts;
+                var ss_post_results = response.posts;
 
                 for( var i=0; i<ss_post_results.length; i++ ) {
                     ss_autocomplete_result.push( ss_post_results[ i ][ 'post_title' ] );
@@ -76,7 +76,7 @@
             };
 
             jQuery.post( ajax_object.ajax_url, ss_input_data, function( response ) {
-                response = JSON.parse( response );
+                response = response;
 
                 //-- get current page & max page
                 var ss_max_page     = parseInt( response.max_num_pages );

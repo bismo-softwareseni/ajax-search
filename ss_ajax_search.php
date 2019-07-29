@@ -176,10 +176,9 @@
             }
 
             
-            echo json_encode( $ss_results );            
+            wp_send_json( $ss_results );            
 
             //-- to terminate immediately and get the proper response
-            wp_die();
         }
 
         //-- function to filter the suggestion search
