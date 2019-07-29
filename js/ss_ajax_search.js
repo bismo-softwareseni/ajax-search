@@ -92,7 +92,7 @@
                 //-- if result exists
                 if( ss_search_result.length > 0 ) {
                     for( var i=0; i<ss_search_result.length; i++ ) {
-                        var ss_html_tags = '<h4><a href="' + ss_search_result[ i ][ 'post_url' ] + '">' + ss_search_result[ i ][ 'post_title' ] + '</a></h4>';
+                        var ss_html_tags = '<h4><a href="' + ss_search_result[ i ][ 'guid' ] + '">' + ss_search_result[ i ][ 'post_title' ] + '</a></h4>';
                         $( '.post-suggestion' ).append( ss_html_tags );    
                     }
     

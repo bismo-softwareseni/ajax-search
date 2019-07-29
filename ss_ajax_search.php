@@ -90,9 +90,15 @@
             //-- localize ajax
 	        wp_localize_script( 'ss_search_main_js', 'ajax_object', array( 'ajax_url' => admin_url( 'admin-ajax.php' ), 'input_value' => 1234 ) );
 
-            //-- jquery ui css and js
-            wp_enqueue_script( 'ss_search_jquery_ui_js', plugin_dir_url( __FILE__ ) . 'lib/jquery-ui/jquery-ui.min.js' );
-            wp_enqueue_style( 'ss_search_jquery_ui_css', plugin_dir_url( __FILE__ ) . 'lib/jquery-ui/jquery-ui.min.css' );
+            //-- jquery ui js and css
+            $ss_wp_scripts = wp_scripts();
+
+            wp_enqueue_script( 'jquery-ui-autocomplete' );
+            wp_enqueue_style( 'jquery-ui-css',
+                'http://ajax.googleapis.com/ajax/libs/jqueryui/' . $ss_wp_scripts->registered['jquery-ui-core']->ver . '/themes/smoothness/jquery-ui.css',
+                false,
+                'v1.0',
+                false);
         }
 
         //-- function for executing some task when this plugin loaded
